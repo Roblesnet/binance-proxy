@@ -41,8 +41,8 @@ async function obtenerPrecioPromedio(fiat, apiTradeType) {
 // Endpoint principal para obtener tasa
 app.get('/tasa', async (req, res) => {
   try {
-    const precioCompraCOP = await obtenerPrecioPromedio("COP", "SELL");
-    const precioVentaVES = await obtenerPrecioPromedio("VES", "BUY");
+    const precioCompraCOP = await obtenerPrecioPromedio("COP", "BUY");
+    const precioVentaVES = await obtenerPrecioPromedio("VES", "SELL");
     
     if (precioCompraCOP > 0 && precioVentaVES > 0) {
       const tasaReal = precioVentaVES / precioCompraCOP;
@@ -74,7 +74,7 @@ app.get('/debug', async (req, res) => {
       fiat: 'COP',
       page: 1,
       rows: 20,
-      tradeType: 'SELL',
+      tradeType: 'BUY',
       merchantCheck: true
     }, {
       headers: {
@@ -88,7 +88,7 @@ app.get('/debug', async (req, res) => {
       fiat: 'VES',
       page: 1,
       rows: 20,
-      tradeType: 'BUY',
+      tradeType: 'SELL',
       merchantCheck: true
     }, {
       headers: {

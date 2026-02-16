@@ -45,7 +45,7 @@ app.get('/tasa', async (req, res) => {
     const precioVentaVES = await obtenerPrecioPromedio("VES", "SELL");
     
     if (precioCompraCOP > 0 && precioVentaVES > 0) {
-      const tasaReal = precioVentaVES / precioCompraCOP;
+      const tasaReal = precioCompraCOP / precioVentaVES;
       const tasaFinal = tasaReal * 1.15; // 15% de margen
       
       res.json({

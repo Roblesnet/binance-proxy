@@ -28,7 +28,7 @@ async function obtenerTasaBinance() {
         asset: 'USDT',
         fiat: 'COP',
         page: 1,
-        rows: 10, // ✅ Reducido de 20 a 10
+        rows: 10,
         tradeType: 'BUY',
         merchantCheck: true,
         publisherType: null
@@ -61,7 +61,7 @@ async function obtenerTasaBinance() {
         asset: 'USDT',
         fiat: 'VES',
         page: 1,
-        rows: 10, // ✅ Reducido de 20 a 10
+        rows: 10,
         tradeType: 'SELL',
         merchantCheck: true,
         publisherType: null
@@ -89,7 +89,7 @@ async function obtenerTasaBinance() {
 
     // ✅ CÁLCULO CORRECTO
     const tasaReal = usdtCOP / usdtVES;
-    const tasaFinal = tasaReal / 1.15; // ✅ DIVISIÓN para aplicar margen del 15%
+    const tasaFinal = tasaReal * 1.15; // ✅ MULTIPLICACIÓN para aplicar margen del 15%
 
     erroresConsecutivos = 0; // Reset si todo va bien
 
@@ -257,7 +257,7 @@ app.get('/debug', async (req, res) => {
         formula: 'tasaFinal = (COP/VES) * 1.15'
       },
       explicacion: {
-        mensaje: 'La tasa FINAL es MENOR que la real porque aplicamos 15% de margen.',
+        mensaje: 'La tasa FINAL incluye un 15% de margen sobre la tasa real.',
         ejemplo: `Con $100.000 COP, el cliente recibe ${(100000/tasaFinal).toFixed(2)} Bs`
       }
     });

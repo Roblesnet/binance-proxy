@@ -236,7 +236,7 @@ app.get('/debug', async (req, res) => {
     const usdtVES = vesSeleccionados.reduce((a, b) => a + b) / vesSeleccionados.length;
 
     const tasaReal = usdtCOP / usdtVES;
-    const tasaFinal = tasaReal / 1.15; // ✅ CORRECTO
+    const tasaFinal = tasaReal * 1.15; // ✅ CORRECTO
 
     res.json({
       timestamp: new Date().toISOString(),
@@ -254,7 +254,7 @@ app.get('/debug', async (req, res) => {
         real: tasaReal.toFixed(4),
         final_con_margen: tasaFinal.toFixed(4),
         margen: '15%',
-        formula: 'tasaFinal = (COP/VES) / 1.15'
+        formula: 'tasaFinal = (COP/VES) * 1.15'
       },
       explicacion: {
         mensaje: 'La tasa FINAL es MENOR que la real porque aplicamos 15% de margen.',

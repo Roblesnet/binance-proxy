@@ -9,7 +9,7 @@ app.use(express.json());
 // ✅ CACHÉ GLOBAL
 let ultimaTasa = null;
 let ultimaActualizacion = null;
-const CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutos
 let erroresConsecutivos = 0;
 let totalRequests = 0;
 let requestsDesdeCache = 0;
@@ -21,7 +21,6 @@ async function obtenerTasaBinance() {
   try {
     console.log('🔍 Consultando Binance P2P...');
 
-    // COP - REDUCIDO A 10 ROWS
     const responseCOP = await axios.post(
       'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
       {
@@ -38,7 +37,7 @@ async function obtenerTasaBinance() {
           'Content-Type': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         },
-        timeout: 10000 // 10 segundos timeout
+        timeout: 10000
       }
     );
 
@@ -46,7 +45,7 @@ async function obtenerTasaBinance() {
       .map(ad => parseFloat(ad.adv.price))
       .filter(p => p > 0)
       .sort((a, b) => a - b)
-      .slice(1, 7); // Posiciones 2-7
+      .slice(1, 7);
 
     if (preciosCOP.length === 0) {
       throw new Error('No se encontraron precios COP válidos');
@@ -54,7 +53,6 @@ async function obtenerTasaBinance() {
 
     const usdtCOP = preciosCOP.reduce((a, b) => a + b) / preciosCOP.length;
 
-    // VES - REDUCIDO A 10 ROWS
     const responseVES = await axios.post(
       'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
       {
@@ -79,7 +77,7 @@ async function obtenerTasaBinance() {
       .map(ad => parseFloat(ad.adv.price))
       .filter(p => p > 0)
       .sort((a, b) => b - a)
-      .slice(1, 7); // Posiciones 2-7
+      .slice(1, 7);
 
     if (preciosVES.length === 0) {
       throw new Error('No se encontraron precios VES válidos');
@@ -89,11 +87,11 @@ async function obtenerTasaBinance() {
 
     // ✅ CÁLCULO CORRECTO
     const tasaReal = usdtCOP / usdtVES;
-    const tasaFinal = tasaReal * 1.15; // ✅ MULTIPLICACIÓN para aplicar margen del 15%
+    const tasaFinal = tasaReal * 1.15;
 
-    erroresConsecutivos = 0; // Reset si todo va bien
+    erroresConsecutivos = 0;
 
-    console.log(`✅ Tasa calculada: ${tasaFinal.toFixed(2)}`);
+    console.log(`✅ Tasa calculada: ${tasaFinal.toFixed(2)} (Real: ${tasaReal.toFixed(2)})`);
 
     return {
       success: true,
@@ -110,10 +108,8 @@ async function obtenerTasaBinance() {
     erroresConsecutivos++;
     console.error(`❌ Error ${erroresConsecutivos}/3:`, error.message);
 
-    // Si falla 3 veces seguidas, espera más tiempo antes de reintentar
     if (erroresConsecutivos >= 3) {
       console.log('⚠️ Demasiados errores consecutivos, esperando 30 minutos...');
-      // No lanzar error, solo esperar
       setTimeout(() => {
         erroresConsecutivos = 0;
         console.log('🔄 Reseteando contador de errores');
@@ -126,7 +122,6 @@ async function obtenerTasaBinance() {
 
 // ✅ ENDPOINT /TASA CON CACHÉ INTELIGENTE
 app.get('/tasa', async (req, res) => {
-  // Verificar si hay caché válido
   if (ultimaTasa && ultimaActualizacion) {
     const edadCache = Date.now() - ultimaActualizacion;
     
@@ -147,7 +142,6 @@ app.get('/tasa', async (req, res) => {
     }
   }
 
-  // Si no hay caché válido, consultar Binance
   try {
     const resultado = await obtenerTasaBinance();
     ultimaTasa = resultado;
@@ -158,7 +152,6 @@ app.get('/tasa', async (req, res) => {
       cache: false
     });
   } catch (error) {
-    // Si hay error pero tenemos caché viejo, usarlo
     if (ultimaTasa) {
       const edadCache = Date.now() - ultimaActualizacion;
       console.log('⚠️ Error en Binance, usando caché antiguo');
@@ -171,7 +164,6 @@ app.get('/tasa', async (req, res) => {
       });
     }
 
-    // Si no hay caché, devolver error
     res.status(500).json({
       success: false,
       error: 'No se pudo obtener la tasa de Binance',
@@ -180,43 +172,19 @@ app.get('/tasa', async (req, res) => {
   }
 });
 
-// ✅ ENDPOINT /DEBUG (sin caché, consulta directa)
+// ✅ ENDPOINT /DEBUG
 app.get('/debug', async (req, res) => {
   try {
     const responseCOP = await axios.post(
       'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
-      {
-        asset: 'USDT',
-        fiat: 'COP',
-        page: 1,
-        rows: 10,
-        tradeType: 'BUY',
-        merchantCheck: true
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
-        }
-      }
+      { asset: 'USDT', fiat: 'COP', page: 1, rows: 10, tradeType: 'BUY', merchantCheck: true },
+      { headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0' } }
     );
 
     const responseVES = await axios.post(
       'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
-      {
-        asset: 'USDT',
-        fiat: 'VES',
-        page: 1,
-        rows: 10,
-        tradeType: 'SELL',
-        merchantCheck: true
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
-        }
-      }
+      { asset: 'USDT', fiat: 'VES', page: 1, rows: 10, tradeType: 'SELL', merchantCheck: true },
+      { headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0' } }
     );
 
     const preciosCOP = responseCOP.data.data
@@ -236,7 +204,7 @@ app.get('/debug', async (req, res) => {
     const usdtVES = vesSeleccionados.reduce((a, b) => a + b) / vesSeleccionados.length;
 
     const tasaReal = usdtCOP / usdtVES;
-    const tasaFinal = tasaReal * 1.15; // ✅ CORRECTO
+    const tasaFinal = tasaReal * 1.15;
 
     res.json({
       timestamp: new Date().toISOString(),
@@ -258,7 +226,7 @@ app.get('/debug', async (req, res) => {
       },
       explicacion: {
         mensaje: 'La tasa FINAL incluye un 15% de margen sobre la tasa real.',
-        ejemplo: `Con $100.000 COP, el cliente recibe ${(100000/tasaFinal).toFixed(2)} Bs`
+        ejemplo: `Con $100.000 COP, el cliente recibe ${(100000 / tasaFinal).toFixed(2)} Bs`
       }
     });
 
@@ -267,7 +235,7 @@ app.get('/debug', async (req, res) => {
   }
 });
 
-// ✅ HEALTH CHECK CON STATS
+// ✅ HEALTH CHECK
 app.get('/', (req, res) => {
   const uptime = process.uptime();
   const edadCache = ultimaActualizacion ? Math.floor((Date.now() - ultimaActualizacion) / 1000) : null;
@@ -276,10 +244,11 @@ app.get('/', (req, res) => {
     status: 'ok',
     message: 'Binance Proxy API funcionando',
     uptime: `${Math.floor(uptime / 60)} minutos`,
+    tasas_actuales: ultimaTasa ? ultimaTasa.datos : 'Pendiente',
     cache: {
       activo: ultimaTasa !== null,
       edad_segundos: edadCache,
-      valido: edadCache ? edadCache < 180 : false
+      valido: edadCache ? edadCache < 900 : false // 900 = 15 minutos
     },
     stats: {
       totalRequests,
@@ -288,31 +257,30 @@ app.get('/', (req, res) => {
       erroresConsecutivos
     },
     endpoints: {
-      tasa: '/tasa (con caché de 3 min)',
+      tasa: '/tasa (con caché de 15 min)',
       debug: '/debug (consulta directa sin caché)'
     }
   });
 });
 
-// ✅ ACTUALIZACIÓN AUTOMÁTICA CADA 5 MINUTOS
+// ✅ ACTUALIZACIÓN AUTOMÁTICA CADA 15 MINUTOS
 setInterval(async () => {
   try {
-    console.log('🔄 Actualización automática programada...');
+    console.log('🔄 Actualización automática cada 15 minutos...');
     const resultado = await obtenerTasaBinance();
     ultimaTasa = resultado;
     ultimaActualizacion = Date.now();
-    console.log(`✅ Caché actualizado automáticamente: ${resultado.datos.tasaFinal}`);
+    console.log(`✅ Caché actualizado: ${resultado.datos.tasaFinal}`);
   } catch (error) {
     console.error('❌ Error en actualización automática:', error.message);
   }
-}, 5 * 60 * 1000); // ✅ CADA 5 MINUTOS
+}, 15 * 60 * 1000); // ✅ CADA 15 MINUTOS
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  
-  // ✅ Primera carga al iniciar
   console.log('📥 Cargando tasa inicial...');
+  
   obtenerTasaBinance()
     .then(resultado => {
       ultimaTasa = resultado;

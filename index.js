@@ -77,7 +77,7 @@ async function obtenerTasaBinance() {
       .map(ad => parseFloat(ad.adv.price))
       .filter(p => p > 0)
       .sort((a, b) => b - a)
-      .slice(1, 7);
+      .slice(1, -1); // descarta el más alto Y el más bajo para evitar órdenes atípicas
 
     if (preciosVES.length === 0) {
       throw new Error('No se encontraron precios VES válidos');
@@ -198,7 +198,7 @@ app.get('/debug', async (req, res) => {
       .sort((a, b) => b - a);
 
     const copSeleccionados = preciosCOP.slice(1, 7);
-    const vesSeleccionados = preciosVES.slice(1, 7);
+    const vesSeleccionados = preciosVES.slice(1, -1); // descarta el más alto Y el más bajo
 
     const usdtCOP = copSeleccionados.reduce((a, b) => a + b) / copSeleccionados.length;
     const usdtVES = vesSeleccionados.reduce((a, b) => a + b) / vesSeleccionados.length;

@@ -73,16 +73,18 @@ async function obtenerTasaBinance() {
       }
     );
 
-    const preciosVES = responseVES.data.data
+    const preciosVES_raw = responseVES.data.data
       .map(ad => parseFloat(ad.adv.price))
       .filter(p => p > 0)
-      .sort((a, b) => b - a)
-      .slice(1, -1); // descarta el más alto Y el más bajo para evitar órdenes atípicas
+      .sort((a, b) => a - b);
 
-    if (preciosVES.length === 0) {
+    if (preciosVES_raw.length === 0) {
       throw new Error('No se encontraron precios VES válidos');
     }
 
+    // Filtrar por mediana: descartar precios que se alejen más del 15%
+    const medianaVES = preciosVES_raw[Math.floor(preciosVES_raw.length / 2)];
+    const preciosVES = preciosVES_raw.filter(p => p >= medianaVES * 0.85 && p <= medianaVES * 1.15);
     const usdtVES = preciosVES.reduce((a, b) => a + b) / preciosVES.length;
 
     // ✅ CÁLCULO CORRECTO
@@ -192,13 +194,16 @@ app.get('/debug', async (req, res) => {
       .filter(p => p > 0)
       .sort((a, b) => a - b);
 
-    const preciosVES = responseVES.data.data
+    const preciosVES_raw = responseVES.data.data
       .map(ad => parseFloat(ad.adv.price))
       .filter(p => p > 0)
-      .sort((a, b) => b - a);
+      .sort((a, b) => a - b);
 
     const copSeleccionados = preciosCOP.slice(1, 7);
-    const vesSeleccionados = preciosVES.slice(1, -1); // descarta el más alto Y el más bajo
+
+    // Filtrar VES por mediana: descartar precios que se alejen más del 15%
+    const medianaVES = preciosVES_raw[Math.floor(preciosVES_raw.length / 2)];
+    const vesSeleccionados = preciosVES_raw.filter(p => p >= medianaVES * 0.85 && p <= medianaVES * 1.15);
 
     const usdtCOP = copSeleccionados.reduce((a, b) => a + b) / copSeleccionados.length;
     const usdtVES = vesSeleccionados.reduce((a, b) => a + b) / vesSeleccionados.length;
@@ -214,7 +219,7 @@ app.get('/debug', async (req, res) => {
         promedio: usdtCOP.toFixed(2)
       },
       VES: {
-        todos_precios: preciosVES.slice(0, 10),
+        todos_precios: preciosVES_raw.slice(0, 10),
         seleccionados: vesSeleccionados,
         promedio: usdtVES.toFixed(2)
       },
